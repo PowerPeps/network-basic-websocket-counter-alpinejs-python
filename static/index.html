@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Counter</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="grid place-items-center h-screen w-screen bg-zinc-900"
+      x-data="{
+                counter: 0,
+                ws: null,
+                connected: false,
+                timer: null,
+                init() {
+                    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    this.ws = new WebSocket(`${protocol}//${location.host}/ws`);
+                    this.ws.onopen = () => this.connected = true;
+                    this.ws.onmessage = e => this.counter = JSON.parse(e.data).counter;
+                    this.ws.onclose = () => { this.connected = false; setTimeout(() => this.init(), 3000); };
+                },
+                change(d) {
+                    this.counter += d;
+                    clearTimeout(this.timer);
+                    this.timer = setTimeout(() => this.ws.send(JSON.stringify({ counter: this.counter })), 250);
+                }
+              }"
+>
+    <div class="bg-white/20 rounded-2xl h-1/2 aspect-square grid place-items-center gap-4 p-4 text-center text-zinc-400">
+
+        <p x-text="counter" class="text-5xl font-bold"></p>
+
+        <div class="grid grid-cols-2 gap-4">
+            <button x-on:click="change(-1)" class="relative items-center font-medium justify-center gap-2 whitespace-nowrap disabled:opacity-75 disabled:cursor-default disabled:pointer-events-none justify-center h-10 text-sm rounded-lg w-10 inline-flex bg-transparent hover:bg-white/15 text-zinc-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14" />
+                </svg>
+            </button>
+            <button x-on:click="change(1)" class="relative items-center font-medium justify-center gap-2 whitespace-nowrap disabled:opacity-75 disabled:cursor-default disabled:pointer-events-none justify-center h-10 text-sm rounded-lg w-10 inline-flex bg-transparent hover:bg-white/15 text-zinc-400 hover:text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+            </button>
+        </div>
+
+        <p x-text="connected ? 'OK' : 'NOP'" :class="connected ? 'text-green-600' : 'text-red-600'" class="text-xl font-medium"></p>
+    </div>
+</body>
+</html>
