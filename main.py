@@ -1,35 +1,27 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-import json
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 counter = 0
-connections = []
 
-@app.get("/")
-async def root(): return {"http://127.0.0.1:8000/static/index.html"}
+class CounterUpdate(BaseModel):
+    counter: int
 
-async def broadcast():
-    for ws in connections[:]:
-        try: await ws.send_text(json.dumps({"counter": counter}))
-        except: connections.remove(ws)
+@app.get("/api/counter")
+async def get_counter():
+    return JSONResponse({"counter": counter})
 
-
-@app.websocket("/ws")
-async def ws(websocket: WebSocket):
+@app.post("/api/counter")
+async def update_counter(data: CounterUpdate):
     global counter
-    await websocket.accept()
-    connections.append(websocket)
-    await websocket.send_text(json.dumps({"counter": counter}))
-    try:
-        while True:
-            data = json.loads(await websocket.receive_text())
-            if "counter" in data: counter = data["counter"] ; await broadcast()
-    except WebSocketDisconnect: connections.remove(websocket)
+    counter = data.counter
+    return JSONResponse({"counter": counter})
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
