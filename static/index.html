@@ -9,20 +9,35 @@
 <body class="grid place-items-center h-screen w-screen bg-zinc-900"
       x-data="{
                 counter: 0,
-                ws: null,
                 connected: false,
                 timer: null,
+                polling: null,
                 init() {
-                    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                    this.ws = new WebSocket(`${protocol}//${location.host}/ws`);
-                    this.ws.onopen = () => this.connected = true;
-                    this.ws.onmessage = e => this.counter = JSON.parse(e.data).counter;
-                    this.ws.onclose = () => { this.connected = false; setTimeout(() => this.init(), 3000); };
+                    this.fetchCounter();
+                    this.polling = setInterval(() => this.fetchCounter(), 1000);
+                },
+                async fetchCounter() {
+                    try {
+                        const response = await fetch('/api/counter');
+                        const data = await response.json();
+                        this.counter = data.counter;
+                        this.connected = true;
+                    } catch (error) {
+                        this.connected = false;
+                    }
                 },
                 change(d) {
                     this.counter += d;
                     clearTimeout(this.timer);
-                    this.timer = setTimeout(() => this.ws.send(JSON.stringify({ counter: this.counter })), 250);
+                    this.timer = setTimeout(async () => {
+                        try {
+                            await fetch('/api/counter', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ counter: this.counter })
+                            });
+                        } catch (error) {}
+                    }, 250);
                 }
               }"
 >

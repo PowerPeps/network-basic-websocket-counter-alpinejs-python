@@ -16,45 +16,41 @@ Ouvrez plusieurs onglets/fenêtres sur : `http://127.0.0.1:8000/static/index.htm
 
 ---
 
-### Fonctionnement
-
-**Initialisation de la connexion :**
-<img width="622" height="441" alt="image" src="https://github.com/user-attachments/assets/dcb3bf97-e982-4161-8158-97c5d106039f" />
+**Initialisation et Polling :**
 
 Étapes :
-1. Le client ouvre une connexion WebSocket vers `ws://localhost:8000/ws`
-2. Le serveur accepte la connexion avec `websocket.accept()`
-3. Le serveur ajoute cette connexion à la liste `connections[]`
-4. Le serveur envoie immédiatement la valeur actuelle du compteur
-5. Le client affiche cette valeur
+1. Le client démarre et appelle immédiatement `fetchCounter()`
+2. Le serveur répond avec `GET /api/counter` → `{"counter": valeur_actuelle}`
+3. Le client affiche la valeur reçue
+4. Un `setInterval` de 1000ms est lancé pour interroger le serveur en boucle
+5. Toutes les secondes, le client redemande la valeur via `GET /api/counter`
 
 **Modification de la valeur du Compteur :**
-<img width="572" height="433" alt="image" src="https://github.com/user-attachments/assets/5859dcae-ad91-4b6b-bf55-fb5d82b7d565" />
 
 **Étapes :**
 
-1. **Client (Frontend)** :
-   - L'utilisateur clique sur le bouton `+` ou `-`.
-   - La fonction `change(d)` met à jour le compteur localement.
-   - Un debounce de 250ms attend que l'utilisateur arrête de cliquer.
-   - Envoie la nouvelle valeur du compteur au serveur via WebSocket.
+1. **Le Client** :
+   - Quand l'utilisateur clique sur le bouton `+` ou `-`
+   - La fonction `change(d)` met à jour le compteur localement
+   - Un debounce de 250ms attend que l'utilisateur arrête de cliquer
+   - Envoie la nouvelle valeur au serveur via `POST /api/counter` avec `{"counter": la_nouvelle_valeur}`
 
-2. **Serveur (Backend)** :
-   - Reçoit le message JSON : `{"counter": la_nouvelle_valeur}`.
-   - Met à jour la variable globale `counter`.
-   - Appelle `broadcast()` pour notifier tous les clients.
+2. **Le Serveur** :
+   - Reçoit le message JSON : `{"counter": la_nouvelle_valeur}`
+   - Met à jour la variable globale `counter`
+   - Répond avec la nouvelle valeur
 
-3. **Broadcast** :
-   - Parcourt la liste `connections[]`.
-   - Envoie le nouveau compteur à chaque client connecté.
-   - Si l'envoi échoue, retire le client de la liste (déconnexion automatique, le client re-tentera de ce connecter au bout de 3s).
+3. **Synchronisation** :
+   - Les autres clients récupèrent la nouvelle valeur lors de leur prochain polling (max 1 seconde de délai)
 
-4. **Reception** :
-   - Les client reçoivent le message avec le nouveau compteur.
-   - Ils mettent à jour leur affichage automatiquement avec alpinejs.
+**Gestion de la connexion :**
 
-**Déconnexion &| Reconnexion :**
+Étapes :
+1. À chaque requête `fetch`, le client vérifie si le serveur répond
+2. Si succès → `connected = true` (affichage "OK" en vert)
+3. Si échec → `connected = false` (affichage "NOP" en rouge)
+4. Le polling continue automatiquement et se reconnecte dès que le serveur est à nouveau disponible
 
-<img width="452" height="676" alt="image" src="https://github.com/user-attachments/assets/76dee0d7-8475-4f44-9091-0357dc4374f7" />
+---
 
-
+**Nota-Bene** : Pour une version sans pooling & sans websocket, veuillez seulement enléver le polling toutes les 1s.
